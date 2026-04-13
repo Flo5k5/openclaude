@@ -14,35 +14,37 @@
 import { getOauthConfig } from '../constants/oauth.js'
 import { getClaudeAIOAuthTokens } from '../utils/auth.js'
 
-/** Ant-only dev override: CLAUDE_BRIDGE_OAUTH_TOKEN, else undefined. */
+/** Env var override: CLAUDE_BRIDGE_OAUTH_TOKEN, else undefined. */
 export function getBridgeTokenOverride(): string | undefined {
-  return (
-    (process.env.USER_TYPE === 'ant' &&
-      process.env.CLAUDE_BRIDGE_OAUTH_TOKEN) ||
-    undefined
-  )
+  // Open build: remove USER_TYPE=ant guard so all users can set bridge token
+  return process.env.CLAUDE_BRIDGE_OAUTH_TOKEN || undefined
 }
 
-/** Ant-only dev override: CLAUDE_BRIDGE_BASE_URL, else undefined. */
+/** Env var override: CLAUDE_BRIDGE_BASE_URL, else undefined. */
 export function getBridgeBaseUrlOverride(): string | undefined {
-  return (
-    (process.env.USER_TYPE === 'ant' && process.env.CLAUDE_BRIDGE_BASE_URL) ||
-    undefined
-  )
+  return process.env.CLAUDE_BRIDGE_BASE_URL || undefined
 }
 
 /**
- * Access token for bridge API calls: dev override first, then the OAuth
- * keychain. Undefined means "not logged in".
+ * Access token for bridge API calls: env override first, then OAuth
+ * keychain, then local bridge default.
  */
 export function getBridgeAccessToken(): string | undefined {
-  return getBridgeTokenOverride() ?? getClaudeAIOAuthTokens()?.accessToken
+  return (
+    getBridgeTokenOverride() ??
+    getClaudeAIOAuthTokens()?.accessToken ??
+    'openclaude-local-bridge'
+  )
 }
 
 /**
- * Base URL for bridge API calls: dev override first, then the production
- * OAuth config. Always returns a URL.
+ * Base URL for bridge API calls: env override first, then OAuth config,
+ * then localhost default for the local bridge server.
  */
 export function getBridgeBaseUrl(): string {
-  return getBridgeBaseUrlOverride() ?? getOauthConfig().BASE_API_URL
+  return (
+    getBridgeBaseUrlOverride() ??
+    getOauthConfig()?.BASE_API_URL ??
+    'http://localhost:4080'
+  )
 }

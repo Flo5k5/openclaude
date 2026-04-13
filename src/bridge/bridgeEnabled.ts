@@ -26,12 +26,11 @@ import { lt } from '../utils/semver.js'
  * is only referenced when bridge mode is enabled at build time.
  */
 export function isBridgeEnabled(): boolean {
-  // Positive ternary pattern — see docs/feature-gating.md.
-  // Negative pattern (if (!feature(...)) return) does not eliminate
-  // inline string literals from external builds.
+  // Open build: bridge is always available when BRIDGE_MODE is enabled.
+  // The original check required claude.ai OAuth + GrowthBook gate; the open
+  // build uses a local bridge server instead, so both are bypassed.
   return feature('BRIDGE_MODE')
-    ? isClaudeAISubscriber() &&
-        getFeatureValue_CACHED_MAY_BE_STALE('tengu_ccr_bridge', false)
+    ? getFeatureValue_CACHED_MAY_BE_STALE('tengu_ccr_bridge', true)
     : false
 }
 
@@ -48,10 +47,8 @@ export function isBridgeEnabled(): boolean {
  * `isBridgeEnabled()` instead.
  */
 export async function isBridgeEnabledBlocking(): Promise<boolean> {
-  return feature('BRIDGE_MODE')
-    ? isClaudeAISubscriber() &&
-        (await checkGate_CACHED_OR_BLOCKING('tengu_ccr_bridge'))
-    : false
+  // Open build: always enabled when BRIDGE_MODE is on.
+  return feature('BRIDGE_MODE') ? true : false
 }
 
 /**
@@ -68,19 +65,9 @@ export async function isBridgeEnabledBlocking(): Promise<boolean> {
  * that re-login would fix it. See CC-1165 / gh-33105.
  */
 export async function getBridgeDisabledReason(): Promise<string | null> {
+  // Open build: bridge is always available (local server, no OAuth needed).
+  // Return null = no reason to disable.
   if (feature('BRIDGE_MODE')) {
-    if (!isClaudeAISubscriber()) {
-      return 'Remote Control requires a claude.ai subscription. Run `claude auth login` to sign in with your claude.ai account.'
-    }
-    if (!hasProfileScope()) {
-      return 'Remote Control requires a full-scope login token. Long-lived tokens (from `claude setup-token` or CLAUDE_CODE_OAUTH_TOKEN) are limited to inference-only for security reasons. Run `claude auth login` to use Remote Control.'
-    }
-    if (!getOauthAccountInfo()?.organizationUuid) {
-      return 'Unable to determine your organization for Remote Control eligibility. Run `claude auth login` to refresh your account information.'
-    }
-    if (!(await checkGate_CACHED_OR_BLOCKING('tengu_ccr_bridge'))) {
-      return 'Remote Control is not yet enabled for your account.'
-    }
     return null
   }
   return 'Remote Control is not available in this build.'
@@ -124,8 +111,9 @@ function getOauthAccountInfo(): ReturnType<
  * on the env-based implementation regardless of this gate.
  */
 export function isEnvLessBridgeEnabled(): boolean {
+  // Open build: always use the v2 (env-less) path — simpler, no Environments API.
   return feature('BRIDGE_MODE')
-    ? getFeatureValue_CACHED_MAY_BE_STALE('tengu_bridge_repl_v2', false)
+    ? getFeatureValue_CACHED_MAY_BE_STALE('tengu_bridge_repl_v2', true)
     : false
 }
 
