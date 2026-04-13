@@ -21,10 +21,10 @@ const version = pkg.version
 const featureFlags: Record<string, boolean> = {
   VOICE_MODE: false,
   PROACTIVE: false,
-  KAIROS: false,
-  BRIDGE_MODE: false,
+  KAIROS: true,
+  BRIDGE_MODE: true,
   DAEMON: false,
-  AGENT_TRIGGERS: false,
+  AGENT_TRIGGERS: true,
   MONITOR_TOOL: true,
   ABLATION_BASELINE: false,
   DUMP_SYSTEM_PROMPT: false,
