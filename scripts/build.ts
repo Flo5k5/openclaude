@@ -106,8 +106,7 @@ function restoreModifiedFiles() {
   modifiedFiles.clear()
 }
 
-preProcessFeatureFlags(join(import.meta.dir, '..', 'src'))
-const numModified = modifiedFiles.size
+let numModified = 0
 
 // Restore source files on abrupt termination (Ctrl+C, kill, etc.)
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
@@ -118,17 +117,19 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 }
 
 try {
+  preProcessFeatureFlags(join(import.meta.dir, '..', 'src'))
+  numModified = modifiedFiles.size
 
-const result = await Bun.build({
-  entrypoints: ['./src/entrypoints/cli.tsx'],
-  outdir: './dist',
-  target: 'node',
-  format: 'esm',
-  splitting: false,
-  sourcemap: 'external',
-  minify: false,
-  naming: 'cli.mjs',
-  define: {
+  const result = await Bun.build({
+    entrypoints: ['./src/entrypoints/cli.tsx'],
+    outdir: './dist',
+    target: 'node',
+    format: 'esm',
+    splitting: false,
+    sourcemap: 'external',
+    minify: false,
+    naming: 'cli.mjs',
+    define: {
     // MACRO.* build-time constants
     // Keep the internal compatibility version high enough to pass
     // first-party minimum-version guards, but expose the real package
@@ -140,8 +141,8 @@ const result = await Bun.build({
       JSON.stringify('report the issue at https://github.com/anthropics/claude-code/issues'),
     'MACRO.PACKAGE_URL': JSON.stringify('@gitlawb/openclaude'),
     'MACRO.NATIVE_PACKAGE_URL': 'undefined',
-  },
-  plugins: [
+    },
+    plugins: [
     noTelemetryPlugin,
     {
       name: 'bun-bundle-shim',
@@ -443,8 +444,8 @@ ${exports}
         )
       },
     },
-  ],
-  external: [
+    ],
+    external: [
     // OpenTelemetry — too many named exports to stub, kept external
     '@opentelemetry/api',
     '@opentelemetry/api-logs',
@@ -474,18 +475,18 @@ ${exports}
     '@aws-sdk/credential-providers',
     '@azure/identity',
     'google-auth-library',
-  ],
-})
+    ],
+  })
 
-if (!result.success) {
-  console.error('Build failed:')
-  for (const log of result.logs) {
-    console.error(log)
+  if (!result.success) {
+    console.error('Build failed:')
+    for (const log of result.logs) {
+      console.error(log)
+    }
+    process.exitCode = 1
+  } else {
+    console.log(`✓ Built openclaude v${version} → dist/cli.mjs`)
   }
-  process.exitCode = 1
-} else {
-  console.log(`✓ Built openclaude v${version} → dist/cli.mjs`)
-}
 
 } finally {
   // Always restore source files, even if Bun.build() throws
