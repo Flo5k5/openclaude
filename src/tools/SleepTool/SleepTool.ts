@@ -25,6 +25,8 @@ const inputSchema = lazySchema(() =>
 
 type Input = z.infer<ReturnType<typeof inputSchema>>
 
+const MAX_TIMEOUT_MS = 2_147_483_647
+
 export const SleepTool = buildTool({
   name: SLEEP_TOOL_NAME,
   maxResultSizeChars: 500,
@@ -87,33 +89,37 @@ export const SleepTool = buildTool({
 
     const startTime = Date.now()
 
+    const abortController = context.abortController
+
     await new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, duration_ms)
-      const abortController = (context as { abortController?: AbortController }).abortController
+      let settled = false
+      let timer: ReturnType<typeof setTimeout> | undefined
 
-      if (!abortController) return
-
-      if (abortController.signal.aborted) {
-        clearTimeout(timer)
+      const finish = () => {
+        if (settled) return
+        settled = true
+        if (timer !== undefined) clearTimeout(timer)
+        if (abortController) {
+          abortController.signal.removeEventListener('abort', finish)
+        }
         resolve()
+      }
+
+      if (abortController?.signal.aborted) {
+        finish()
         return
       }
 
-      let cleanupTimer: ReturnType<typeof setTimeout> | undefined
-      const onAbort = () => {
-        clearTimeout(timer)
-        if (cleanupTimer !== undefined) clearTimeout(cleanupTimer)
-        resolve()
-      }
-      abortController.signal.addEventListener('abort', onAbort, { once: true })
-      // Clean up listener on normal completion to avoid leak
-      cleanupTimer = setTimeout(() => {
-        abortController.signal.removeEventListener('abort', onAbort)
-      }, duration_ms + 1)
+      abortController?.signal.addEventListener('abort', finish, { once: true })
+
+      // maxSleepDurationMs = -1 means "wait until interrupted"
+      if (maxSleep === -1) return
+
+      timer = setTimeout(finish, Math.min(duration_ms, MAX_TIMEOUT_MS))
     })
 
     const elapsed = Date.now() - startTime
-    const interrupted = elapsed < duration_ms - 50 // 50ms tolerance
+    const interrupted = maxSleep === -1 || elapsed < duration_ms - 50
 
     return {
       data: {

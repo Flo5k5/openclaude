@@ -1,5 +1,5 @@
 /**
- * /assistant command — configure and toggle assistant mode.
+ * /assistant command — show assistant mode status and setup help.
  *
  * Imported by commands.ts:75 when feature('KAIROS').
  */
@@ -32,7 +32,7 @@ export async function computeDefaultInstallDir(): Promise<string> {
 const assistant = {
   type: 'local-jsx' as const,
   name: 'assistant',
-  description: 'Toggle assistant mode',
+  description: 'Show assistant mode status',
   isEnabled: () => true,
   immediate: true,
 

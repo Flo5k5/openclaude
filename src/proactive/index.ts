@@ -5,9 +5,9 @@
  * via feature('PROACTIVE') || feature('KAIROS') guards.
  *
  * All call sites use optional chaining (proactiveModule?.method()), so
- * returning safe "off" defaults is sufficient. A full implementation would
- * fire periodic <tick> prompts; this stub keeps the mode permanently off
- * while satisfying the API contract.
+ * returning safe defaults is sufficient. A full implementation would
+ * fire periodic <tick> prompts; this stub preserves state-change behavior
+ * but does not schedule or emit proactive ticks.
  */
 
 type Unsubscribe = () => void
